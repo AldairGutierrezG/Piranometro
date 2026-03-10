@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medidor Solar LabVolt</title>
+
+<!-- PWA Manifest embebido -->
+<link rel="manifest" href='data:application/manifest+json,{"name":"Medidor Solar LabVolt","short_name":"SolarLabVolt","start_url":".","display":"standalone","background_color":"#ffffff","theme_color":"#0c4a7a","icons":[{"src":"utld.png","sizes":"192x192","type":"image/png"},{"src":"utld.png","sizes":"512x512","type":"image/png"}]}'>
+
+<meta name="theme-color" content="#0c4a7a">
+
+<style>
+body{
+font-family:Arial, sans-serif;
+background:#eef3f8;
+margin:0;
+display:flex;
+justify-content:center;
+align-items:center;
+min-height:100vh;
+}
+
+.logo{
+position:fixed;
+width:120px;
+top:10px;
+}
+
+.top-left{left:10px;}
+.top-right{right:10px;}
+
+.container{
+background:white;
+padding:25px;
+border-radius:12px;
+box-shadow:0 0 12px rgba(0,0,0,0.2);
+width:95%;
+max-width:420px;
+text-align:center;
+}
+
+h2{margin-bottom:4px;color:#0c4a7a}
+
+.autor{
+font-size:14px;
+color:#555;
+margin-bottom:10px;
+}
+
+input{
+width:90%;
+padding:10px;
+font-size:18px;
+margin:10px;
+}
+
+button{
+padding:10px 20px;
+font-size:16px;
+border:none;
+border-radius:6px;
+background:#1a73e8;
+color:white;
+cursor:pointer;
+}
+
+button:hover{background:#1258b5}
+
+#resultado{
+font-size:26px;
+font-weight:bold;
+margin-top:15px;
+}
+
+canvas{
+margin-top:15px;
+}
+
+.table-container{
+max-height:150px;
+overflow-y:auto;
+margin-top:15px;
+}
+
+table{
+width:100%;
+font-size:14px;
+border-collapse:collapse;
+}
+
+td,th{
+border-bottom:1px solid #ddd;
+padding:4px;
+}
+
+.save-btn{
+margin-top:10px;
+background:#1b8a3c;
+}
+
+</style>
+</head>
+
+<body>
+
+<img src="utld.png" class="logo top-left">
+<img src="renders.png" class="logo top-right">
+
+<div class="container">
+
+<h2>Calculadora de Irradiancia</h2>
+<div class="autor">Ing. Braulio Aldair Gutierrez G.</div>
+
+<p>Piranómetro LabVolt</p>
+<p><b>Sensibilidad fija: 10.55 µV/(W/m²)</b></p>
+
+<input type="number" id="mv" placeholder="Voltaje (mV)">
+
+<button onclick="calcular()">Calcular</button>
+
+<div id="resultado">---</div>
+
+<canvas id="gauge" width="300" height="160"></canvas>
+
+<div class="table-container">
+<table id="tabla">
+<thead>
+<tr>
+<th>Hora</th>
+<th>mV</th>
+<th>W/m²</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<button class="save-btn" onclick="descargarCSV()">Guardar CSV</button>
+
+</div>
+
+<script>
+
+/* ===== REGISTRO SERVICE WORKER PARA APP INSTALABLE ===== */
+if('serviceWorker' in navigator){
+
+const swCode=`
+self.addEventListener('install',e=>{
+self.skipWaiting()
+})
+
+self.addEventListener('fetch',e=>{
+})
+`
+
+const blob=new Blob([swCode],{type:'text/javascript'})
+const swURL=URL.createObjectURL(blob)
+
+navigator.serviceWorker.register(swURL)
+
+}
+
+/* ===== FUNCIONES APP ===== */
+
+let datos=[]
+
+function calcular(){
+
+let mv=parseFloat(document.getElementById("mv").value)
+
+if(isNaN(mv))return
+
+let irradiancia=(mv*1000)/10.55
+
+mostrarResultado(irradiancia)
+actualizarGauge(irradiancia)
+registrarDato(mv,irradiancia)
+
+}
+
+function mostrarResultado(valor){
+
+let color="green"
+
+if(valor<300) color="blue"
+else if(valor<700) color="orange"
+else color="red"
+
+let div=document.getElementById("resultado")
+
+div.style.color=color
+
+div.innerHTML=valor.toFixed(2)+" W/m²"
+
+}
+
+function actualizarGauge(valor){
+
+let canvas=document.getElementById("gauge")
+let ctx=canvas.getContext("2d")
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+let max=1200
+let porcentaje=Math.min(valor/max,1)
+
+let angulo=porcentaje*Math.PI
+
+ctx.beginPath()
+ctx.arc(150,150,120,Math.PI,2*Math.PI)
+ctx.lineWidth=18
+ctx.strokeStyle="#ddd"
+ctx.stroke()
+
+ctx.beginPath()
+ctx.arc(150,150,120,Math.PI,Math.PI+angulo)
+ctx.lineWidth=18
+ctx.strokeStyle="orange"
+ctx.stroke()
+
+}
+
+function registrarDato(mv,irr){
+
+let hora=new Date().toLocaleTimeString()
+
+datos.push({hora,mv,irr})
+
+let tabla=document.querySelector("#tabla tbody")
+
+let row=tabla.insertRow()
+
+row.insertCell(0).innerText=hora
+row.insertCell(1).innerText=mv
+row.insertCell(2).innerText=irr.toFixed(2)
+
+}
+
+function descargarCSV(){
+
+let csv="Hora,mV,W/m2\n"
+
+datos.forEach(d=>{
+
+csv+=`${d.hora},${d.mv},${d.irr}\n`
+
+})
+
+let blob=new Blob([csv],{type:"text/csv"})
+
+let a=document.createElement("a")
+
+a.href=URL.createObjectURL(blob)
+
+a.download="datos_piranometro.csv"
+
+a.click()
+
+}
+
+</script>
+
+</body>
+</html>
