@@ -4,11 +4,11 @@ Aplicación web y móvil para calcular **irradiancia solar (W/m²)** a partir de
 
 Desarrollado para prácticas de laboratorio en **Ingeniería en Energías Renovables**.
 
-## 👨‍🏫 Autor
+## Autor
 
 **Ing. Braulio Aldair Gutierrez G.**
 
-## 🔬 Descripción
+## Descripción
 
 Esta aplicación permite convertir mediciones de **milivolts (mV)** provenientes de un piranómetro en **irradiancia solar (W/m²)**.
 
@@ -22,7 +22,7 @@ Ecuación utilizada:
 
 Irradiancia (W/m²) = (mV × 1000) / 10.55
 
-## ⚙️ Funciones
+## Funciones
 
 * Calculadora de irradiancia solar
 * Medidor gráfico tipo gauge
@@ -32,7 +32,7 @@ Irradiancia (W/m²) = (mV × 1000) / 10.55
 * Interfaz optimizada para celular
 * Aplicación instalable (PWA)
 
-## 📱 Uso en prácticas
+## Uso en prácticas
 
 1. Medir el voltaje del piranómetro en **milivolts (mV)**
 2. Introducir el valor en la aplicación
@@ -40,7 +40,7 @@ Irradiancia (W/m²) = (mV × 1000) / 10.55
 4. Obtener la **irradiancia solar en W/m²**
 5. Guardar las mediciones en **CSV** para análisis posterior
 
-## 🌞 Rangos de irradiancia
+## Rangos de irradiancia
 
 | Irradiancia    | Condición       |
 | -------------- | --------------- |
@@ -48,7 +48,7 @@ Irradiancia (W/m²) = (mV × 1000) / 10.55
 | 300 – 700 W/m² | Radiación media |
 | > 700 W/m²     | Alta radiación  |
 
-## 📂 Archivos del proyecto
+## Archivos del proyecto
 
 ```
 piranometro.html
@@ -57,7 +57,7 @@ renders.png
 README.md
 ```
 
-## 🎓 Uso académico
+## Uso académico
 
 Este proyecto fue desarrollado como herramienta didáctica para el **laboratorio de energía solar**.
 
@@ -67,6 +67,6 @@ Puede ser utilizado por estudiantes para:
 * registro de datos experimentales
 * análisis de irradiancia
 
-## 📜 Licencia
+## Licencia
 
 Uso educativo y académico.
