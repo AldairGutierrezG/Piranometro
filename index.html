@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Medidor Solar LabVolt</title>
 
-<link rel="manifest" href='data:application/manifest+json,{"name":"Medidor Solar LabVolt","short_name":"SolarLabVolt","start_url":".","display":"standalone","background_color":"#ffffff","theme_color":"#0c4a7a"}'>
-
 <style>
+
 body{
-font-family:Arial, sans-serif;
+font-family:Arial;
 background:#eef3f8;
 margin:0;
 display:flex;
@@ -37,7 +37,7 @@ max-width:420px;
 text-align:center;
 }
 
-h2{margin-bottom:4px;color:#0c4a7a}
+h2{color:#0c4a7a;margin-bottom:4px}
 
 .autor{
 font-size:14px;
@@ -60,6 +60,7 @@ border-radius:6px;
 background:#1a73e8;
 color:white;
 cursor:pointer;
+margin:5px;
 }
 
 button:hover{background:#1258b5}
@@ -73,7 +74,6 @@ margin-top:10px;
 .info{
 font-size:14px;
 margin-top:5px;
-color:#444;
 }
 
 canvas{
@@ -120,21 +120,26 @@ background:#1b8a3c;
 
 <input type="number" id="mv" placeholder="Voltaje (mV)">
 
+<br>
+
 <button onclick="calcular()">Calcular</button>
+
+<button onclick="obtenerUbicacion()">📍 Obtener ubicación</button>
 
 <div id="resultado">---</div>
 
 <div class="info" id="temp">Temperatura estimada: -- °C</div>
+
 <div class="info" id="ubicacion">Ubicación: --</div>
 
-<!-- MEDIDOR SOLAR -->
 <canvas id="gauge" width="320" height="200"></canvas>
 
-<!-- POSICIÓN DEL SOL -->
 <canvas id="solCanvas" width="320" height="160"></canvas>
 
 <div class="table-container">
+
 <table id="tabla">
+
 <thead>
 <tr>
 <th>Hora</th>
@@ -142,8 +147,11 @@ background:#1b8a3c;
 <th>W/m²</th>
 </tr>
 </thead>
+
 <tbody></tbody>
+
 </table>
+
 </div>
 
 <button class="save-btn" onclick="descargarCSV()">Guardar CSV</button>
@@ -154,28 +162,25 @@ background:#1b8a3c;
 
 let datos=[]
 
-/* ========================= */
-/* CALCULO PRINCIPAL */
-/* ========================= */
-
 function calcular(){
 
 let mv=parseFloat(document.getElementById("mv").value)
+
 if(isNaN(mv)) return
 
 let irradiancia=(mv*1000)/10.55
 
 mostrarResultado(irradiancia)
+
 dibujarMedidor(irradiancia)
+
 estimarTemperatura(irradiancia)
+
 dibujarSol()
+
 registrarDato(mv,irradiancia)
 
 }
-
-/* ========================= */
-/* RESULTADO */
-/* ========================= */
 
 function mostrarResultado(valor){
 
@@ -186,16 +191,12 @@ else if(valor<700) color="orange"
 else color="red"
 
 let div=document.getElementById("resultado")
+
 div.style.color=color
 
 div.innerHTML=valor.toFixed(2)+" W/m²"
 
 }
-
-/* ========================= */
-/* TEMPERATURA ESTIMADA */
-/* modelo simple educativo */
-/* ========================= */
 
 function estimarTemperatura(irr){
 
@@ -205,10 +206,6 @@ document.getElementById("temp").innerHTML=
 "Temperatura estimada: "+temp.toFixed(1)+" °C"
 
 }
-
-/* ========================= */
-/* MEDIDOR ANALÓGICO */
-/* ========================= */
 
 function dibujarMedidor(valor){
 
@@ -222,14 +219,17 @@ let cy=160
 let radio=120
 
 let max=1200
+
 let anguloValor=(valor/max)*Math.PI
 
 function arco(inicio,fin,color){
+
 ctx.beginPath()
 ctx.arc(cx,cy,radio,inicio,fin)
 ctx.lineWidth=18
 ctx.strokeStyle=color
 ctx.stroke()
+
 }
 
 arco(Math.PI,Math.PI+Math.PI*0.25,"blue")
@@ -270,11 +270,6 @@ ctx.fill()
 
 }
 
-/* ========================= */
-/* POSICION DEL SOL */
-/* modelo gráfico por hora */
-/* ========================= */
-
 function dibujarSol(){
 
 let canvas=document.getElementById("solCanvas")
@@ -293,21 +288,19 @@ if(progreso<0) progreso=0
 if(progreso>1) progreso=1
 
 let x=20+progreso*280
+
 let y=120-Math.sin(progreso*Math.PI)*80
 
-/* horizonte */
 ctx.beginPath()
 ctx.moveTo(10,120)
 ctx.lineTo(310,120)
 ctx.stroke()
 
-/* trayectoria */
 ctx.beginPath()
 ctx.arc(160,120,140,Math.PI,2*Math.PI)
 ctx.strokeStyle="#aaa"
 ctx.stroke()
 
-/* sol */
 ctx.beginPath()
 ctx.arc(x,y,12,0,2*Math.PI)
 ctx.fillStyle="orange"
@@ -315,18 +308,18 @@ ctx.fill()
 
 }
 
-/* ========================= */
-/* UBICACION GPS */
-/* ========================= */
-
 function obtenerUbicacion(){
 
 if(!navigator.geolocation){
-alert("La geolocalización no es soportada por este dispositivo")
+
+alert("Tu dispositivo no soporta geolocalización")
+
 return
+
 }
 
 navigator.geolocation.getCurrentPosition(
+
 async function(pos){
 
 let lat=pos.coords.latitude.toFixed(4)
@@ -339,6 +332,7 @@ try{
 let url=`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
 
 let res=await fetch(url)
+
 let data=await res.json()
 
 ciudad=
@@ -361,19 +355,14 @@ document.getElementById("ubicacion").innerHTML=texto
 },
 
 function(error){
+
 alert("Debes permitir el acceso a la ubicación")
+
 }
 
 )
 
 }
-
-obtenerUbicacion()
-dibujarSol()
-
-/* ========================= */
-/* REGISTRO DATOS */
-/* ========================= */
 
 function registrarDato(mv,irr){
 
@@ -384,15 +373,12 @@ datos.push({hora,mv,irr})
 let tabla=document.querySelector("#tabla tbody")
 
 let row=tabla.insertRow()
+
 row.insertCell(0).innerText=hora
 row.insertCell(1).innerText=mv
 row.insertCell(2).innerText=irr.toFixed(2)
 
 }
-
-/* ========================= */
-/* EXPORTAR CSV */
-/* ========================= */
 
 function descargarCSV(){
 
@@ -407,8 +393,11 @@ csv+=`${d.hora},${d.mv},${d.irr}\n`
 let blob=new Blob([csv],{type:"text/csv"})
 
 let a=document.createElement("a")
+
 a.href=URL.createObjectURL(blob)
+
 a.download="datos_piranometro.csv"
+
 a.click()
 
 }
