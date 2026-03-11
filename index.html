@@ -321,9 +321,13 @@ ctx.fill()
 
 function obtenerUbicacion(){
 
-if(!navigator.geolocation) return
+if(!navigator.geolocation){
+alert("La geolocalización no es soportada por este dispositivo")
+return
+}
 
-navigator.geolocation.getCurrentPosition(async pos=>{
+navigator.geolocation.getCurrentPosition(
+async function(pos){
 
 let lat=pos.coords.latitude.toFixed(4)
 let lon=pos.coords.longitude.toFixed(4)
@@ -332,30 +336,35 @@ let ciudad=""
 
 try{
 
-/* reverse geocoding con OpenStreetMap */
 let url=`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
 
 let res=await fetch(url)
 let data=await res.json()
 
 ciudad=
- data.address.city ||
- data.address.town ||
- data.address.village ||
- data.address.state || ""
+data.address.city ||
+data.address.town ||
+data.address.village ||
+data.address.municipality ||
+data.address.county ||
+data.address.state ||
+""
 
-}catch(e){
-ciudad=""
-}
+}catch(e){}
 
 let texto=`Ubicación: ${lat}, ${lon}`
 
 if(ciudad!="") texto+=`, ${ciudad}`
 
-
 document.getElementById("ubicacion").innerHTML=texto
 
-})
+},
+
+function(error){
+alert("Debes permitir el acceso a la ubicación")
+}
+
+)
 
 }
 
