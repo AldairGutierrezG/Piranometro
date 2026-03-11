@@ -1,105 +1,61 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Medidor Solar LabVolt</title>
+
+<title>Calculadora de Irradiancia</title>
 
 <style>
 
 body{
 font-family:Arial;
-background:#eef3f8;
+background:#e6eef5;
+text-align:center;
 margin:0;
-display:flex;
-justify-content:center;
-align-items:center;
-min-height:100vh;
 }
-
-.logo{
-position:fixed;
-width:120px;
-top:10px;
-}
-
-.top-left{left:10px}
-.top-right{right:10px}
 
 .container{
-background:white;
-padding:25px;
+background:#f3f3f3;
+width:400px;
+margin:60px auto;
+padding:30px;
 border-radius:12px;
-box-shadow:0 0 12px rgba(0,0,0,0.2);
-width:95%;
-max-width:420px;
-text-align:center;
+box-shadow:0px 4px 10px rgba(0,0,0,0.2);
 }
 
-h2{color:#0c4a7a;margin-bottom:4px}
-
-.autor{
-font-size:14px;
-color:#555;
-margin-bottom:10px;
+h1{
+color:#1e5aa8;
 }
 
 input{
 width:90%;
-padding:10px;
-font-size:18px;
-margin:10px;
+padding:12px;
+font-size:16px;
+margin-top:15px;
+border:1px solid #aaa;
+border-radius:5px;
 }
 
 button{
-padding:10px 20px;
-font-size:16px;
-border:none;
-border-radius:6px;
-background:#1a73e8;
+padding:10px 16px;
+font-size:15px;
+margin:10px;
+background:#2d74da;
 color:white;
+border:none;
+border-radius:5px;
 cursor:pointer;
-margin:5px;
 }
 
-button:hover{background:#1258b5}
+button:hover{
+background:#1c56a5;
+}
 
-#resultado{
-font-size:28px;
+.instrumento{
+font-size:30px;
 font-weight:bold;
-margin-top:10px;
-}
-
-.info{
-font-size:14px;
-margin-top:5px;
-}
-
-canvas{
-margin-top:15px;
-}
-
-.table-container{
-max-height:150px;
-overflow-y:auto;
-margin-top:15px;
-}
-
-table{
-width:100%;
-font-size:14px;
-border-collapse:collapse;
-}
-
-td,th{
-border-bottom:1px solid #ddd;
-padding:4px;
-}
-
-.save-btn{
-margin-top:10px;
-background:#1b8a3c;
+margin:15px;
 }
 
 </style>
@@ -107,18 +63,19 @@ background:#1b8a3c;
 
 <body>
 
-<img src="utld.png" class="logo top-left">
-<img src="renders.png" class="logo top-right">
-
 <div class="container">
 
-<h2>Calculadora de Irradiancia</h2>
-<div class="autor">Ing. Braulio Aldair Gutierrez G.</div>
+<h1>Calculadora de Irradiancia</h1>
+
+<p>Ing. Braulio Aldair Gutierrez G.</p>
 
 <p>Piranómetro LabVolt</p>
-<p><b>Sensibilidad fija: 10.55 µV/(W/m²)</b></p>
 
-<input type="number" id="mv" placeholder="Voltaje (mV)">
+<b>Sensibilidad fija: 10.55 µV/(W/m²)</b>
+
+<br><br>
+
+<input type="number" id="voltaje" placeholder="Voltaje (mV)">
 
 <br>
 
@@ -126,35 +83,19 @@ background:#1b8a3c;
 
 <button onclick="obtenerUbicacion()">📍 Obtener ubicación</button>
 
-<div id="resultado">---</div>
+<div class="instrumento" id="resultado">---</div>
 
-<div class="info" id="temp">Temperatura estimada: -- °C</div>
+<p>Temperatura estimada: <span id="temp">--</span> °C</p>
 
-<div class="info" id="ubicacion">Ubicación: --</div>
+<p id="ubicacion">
+Ubicación: --
+</p>
 
-<canvas id="gauge" width="320" height="200"></canvas>
+<br>
 
-<canvas id="solCanvas" width="320" height="160"></canvas>
+<button onclick="guardarDato()">Guardar medición</button>
 
-<div class="table-container">
-
-<table id="tabla">
-
-<thead>
-<tr>
-<th>Hora</th>
-<th>mV</th>
-<th>W/m²</th>
-</tr>
-</thead>
-
-<tbody></tbody>
-
-</table>
-
-</div>
-
-<button class="save-btn" onclick="descargarCSV()">Guardar CSV</button>
+<button onclick="guardarCSV()">Exportar CSV</button>
 
 </div>
 
@@ -162,201 +103,61 @@ background:#1b8a3c;
 
 let datos=[]
 
+let lat=null
+let lon=null
+let ciudad=""
+
+//-----------------------------------
+// CALCULAR IRRADIANCIA
+//-----------------------------------
+
 function calcular(){
 
-let mv=parseFloat(document.getElementById("mv").value)
+let mV=parseFloat(document.getElementById("voltaje").value)
 
-if(isNaN(mv)) return
+if(isNaN(mV)){
+alert("Ingrese voltaje")
+return
+}
 
-let irradiancia=(mv*1000)/10.55
+let microV=mV*1000
 
-mostrarResultado(irradiancia)
+let irradiancia=microV/10.55
 
-dibujarMedidor(irradiancia)
+irradiancia=irradiancia.toFixed(2)
 
-estimarTemperatura(irradiancia)
+document.getElementById("resultado").innerText=
+irradiancia+" W/m²"
 
-dibujarSol()
+/* temperatura aproximada */
 
-registrarDato(mv,irradiancia)
+let temp=20+(irradiancia*0.03)
+
+document.getElementById("temp").innerText=
+temp.toFixed(1)
 
 }
 
-function mostrarResultado(valor){
-
-let color="green"
-
-if(valor<300) color="blue"
-else if(valor<700) color="orange"
-else color="red"
-
-let div=document.getElementById("resultado")
-
-div.style.color=color
-
-div.innerHTML=valor.toFixed(2)+" W/m²"
-
-}
-
-function estimarTemperatura(irr){
-
-let temp=15+(irr*0.02)
-
-document.getElementById("temp").innerHTML=
-"Temperatura estimada: "+temp.toFixed(1)+" °C"
-
-}
-
-function dibujarMedidor(valor){
-
-let canvas=document.getElementById("gauge")
-let ctx=canvas.getContext("2d")
-
-ctx.clearRect(0,0,canvas.width,canvas.height)
-
-let cx=160
-let cy=160
-let radio=120
-
-let max=1200
-
-let anguloValor=(valor/max)*Math.PI
-
-function arco(inicio,fin,color){
-
-ctx.beginPath()
-ctx.arc(cx,cy,radio,inicio,fin)
-ctx.lineWidth=18
-ctx.strokeStyle=color
-ctx.stroke()
-
-}
-
-arco(Math.PI,Math.PI+Math.PI*0.25,"blue")
-arco(Math.PI+Math.PI*0.25,Math.PI+Math.PI*0.55,"green")
-arco(Math.PI+Math.PI*0.55,Math.PI+Math.PI*0.8,"orange")
-arco(Math.PI+Math.PI*0.8,2*Math.PI,"red")
-
-ctx.fillStyle="black"
-ctx.font="12px Arial"
-
-for(let i=0;i<=1200;i+=200){
-
-let ang=Math.PI+(i/max)*Math.PI
-
-let x=cx+Math.cos(ang)*(radio-25)
-let y=cy+Math.sin(ang)*(radio-25)
-
-ctx.fillText(i,x-10,y+5)
-
-}
-
-let ang=Math.PI+anguloValor
-
-let x=cx+Math.cos(ang)*(radio-30)
-let y=cy+Math.sin(ang)*(radio-30)
-
-ctx.beginPath()
-ctx.moveTo(cx,cy)
-ctx.lineTo(x,y)
-ctx.lineWidth=4
-ctx.strokeStyle="black"
-ctx.stroke()
-
-ctx.beginPath()
-ctx.arc(cx,cy,6,0,2*Math.PI)
-ctx.fillStyle="black"
-ctx.fill()
-
-}
-
-function dibujarSol(){
-
-let canvas=document.getElementById("solCanvas")
-let ctx=canvas.getContext("2d")
-
-ctx.clearRect(0,0,canvas.width,canvas.height)
-
-let hora=new Date().getHours()+new Date().getMinutes()/60
-
-let salida=6
-let puesta=18
-
-let progreso=(hora-salida)/(puesta-salida)
-
-if(progreso<0) progreso=0
-if(progreso>1) progreso=1
-
-let x=20+progreso*280
-
-let y=120-Math.sin(progreso*Math.PI)*80
-
-ctx.beginPath()
-ctx.moveTo(10,120)
-ctx.lineTo(310,120)
-ctx.stroke()
-
-ctx.beginPath()
-ctx.arc(160,120,140,Math.PI,2*Math.PI)
-ctx.strokeStyle="#aaa"
-ctx.stroke()
-
-ctx.beginPath()
-ctx.arc(x,y,12,0,2*Math.PI)
-ctx.fillStyle="orange"
-ctx.fill()
-
-}
+//-----------------------------------
+// OBTENER UBICACIÓN
+//-----------------------------------
 
 function obtenerUbicacion(){
 
-if(!navigator.geolocation){
-
-alert("Tu dispositivo no soporta geolocalización")
-
-return
-
-}
-
 navigator.geolocation.getCurrentPosition(
 
-async function(pos){
+function(pos){
 
-let lat=pos.coords.latitude.toFixed(4)
-let lon=pos.coords.longitude.toFixed(4)
+lat=pos.coords.latitude
+lon=pos.coords.longitude
 
-let ciudad=""
-
-try{
-
-let url=`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
-
-let res=await fetch(url)
-
-let data=await res.json()
-
-ciudad=
-data.address.city ||
-data.address.town ||
-data.address.village ||
-data.address.municipality ||
-data.address.county ||
-data.address.state ||
-""
-
-}catch(e){}
-
-let texto=`Ubicación: ${lat}, ${lon}`
-
-if(ciudad!="") texto+=`, ${ciudad}`
-
-document.getElementById("ubicacion").innerHTML=texto
+buscarCiudad()
 
 },
 
-function(error){
+function(){
 
-alert("Debes permitir el acceso a la ubicación")
+alert("No se pudo obtener ubicación")
 
 }
 
@@ -364,41 +165,119 @@ alert("Debes permitir el acceso a la ubicación")
 
 }
 
-function registrarDato(mv,irr){
+//-----------------------------------
+// BUSCAR CIUDAD (FIX WEBVIEW)
+//-----------------------------------
 
-let hora=new Date().toLocaleTimeString()
+function buscarCiudad(){
 
-datos.push({hora,mv,irr})
+fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`,{
 
-let tabla=document.querySelector("#tabla tbody")
+headers:{
+"User-Agent":"MedidorSolarLabVoltApp"
+}
 
-let row=tabla.insertRow()
+})
 
-row.insertCell(0).innerText=hora
-row.insertCell(1).innerText=mv
-row.insertCell(2).innerText=irr.toFixed(2)
+.then(r=>r.json())
+
+.then(data=>{
+
+ciudad=
+data.address.city||
+data.address.town||
+data.address.village||
+data.address.state||
+"Ubicación desconocida"
+
+document.getElementById("ubicacion").innerText=
+"Ubicación: "+
+lat.toFixed(4)+", "+
+lon.toFixed(4)+
+", "+
+ciudad
+
+})
+
+.catch(()=>{
+
+document.getElementById("ubicacion").innerText=
+"Ubicación: "+
+lat.toFixed(4)+", "+
+lon.toFixed(4)
+
+})
 
 }
 
-function descargarCSV(){
+//-----------------------------------
+// GUARDAR MEDICIÓN
+//-----------------------------------
 
-let csv="Hora,mV,W/m2\n"
+function guardarDato(){
+
+let irr=document.getElementById("resultado").innerText
+
+if(irr==="---"){
+alert("Primero calcule irradiancia")
+return
+}
+
+let fecha=new Date().toLocaleString()
+
+datos.push({
+
+fecha:fecha,
+irradiancia:irr,
+temp:document.getElementById("temp").innerText,
+lat:lat,
+lon:lon,
+ciudad:ciudad
+
+})
+
+alert("Medición guardada")
+
+}
+
+//-----------------------------------
+// EXPORTAR CSV (FUNCIONA EN APK)
+//-----------------------------------
+
+function guardarCSV(){
+
+if(datos.length==0){
+
+alert("No hay datos")
+
+return
+
+}
+
+let csv="Fecha,Irradiancia,Temperatura,Latitud,Longitud,Ciudad\n"
 
 datos.forEach(d=>{
 
-csv+=`${d.hora},${d.mv},${d.irr}\n`
+csv+=`${d.fecha},${d.irradiancia},${d.temp},${d.lat},${d.lon},${d.ciudad}\n`
 
 })
 
 let blob=new Blob([csv],{type:"text/csv"})
 
+let url=URL.createObjectURL(blob)
+
 let a=document.createElement("a")
 
-a.href=URL.createObjectURL(blob)
+a.href=url
+a.download="mediciones_solares.csv"
 
-a.download="datos_piranometro.csv"
+document.body.appendChild(a)
 
 a.click()
+
+document.body.removeChild(a)
+
+URL.revokeObjectURL(url)
 
 }
 
