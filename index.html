@@ -5,10 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Medidor Solar LabVolt</title>
 
-<!-- PWA Manifest embebido -->
-<link rel="manifest" href='data:application/manifest+json,{"name":"Medidor Solar LabVolt","short_name":"SolarLabVolt","start_url":".","display":"standalone","background_color":"#ffffff","theme_color":"#0c4a7a","icons":[{"src":"utld.png","sizes":"192x192","type":"image/png"},{"src":"utld.png","sizes":"512x512","type":"image/png"}]}'>
-
-<meta name="theme-color" content="#0c4a7a">
+<link rel="manifest" href='data:application/manifest+json,{"name":"Medidor Solar LabVolt","short_name":"SolarLabVolt","start_url":".","display":"standalone","background_color":"#ffffff","theme_color":"#0c4a7a"}'>
 
 <style>
 body{
@@ -27,8 +24,8 @@ width:120px;
 top:10px;
 }
 
-.top-left{left:10px;}
-.top-right{right:10px;}
+.top-left{left:10px}
+.top-right{right:10px}
 
 .container{
 background:white;
@@ -68,9 +65,15 @@ cursor:pointer;
 button:hover{background:#1258b5}
 
 #resultado{
-font-size:26px;
+font-size:28px;
 font-weight:bold;
-margin-top:15px;
+margin-top:10px;
+}
+
+.info{
+font-size:14px;
+margin-top:5px;
+color:#444;
 }
 
 canvas{
@@ -121,7 +124,14 @@ background:#1b8a3c;
 
 <div id="resultado">---</div>
 
-<canvas id="gauge" width="300" height="160"></canvas>
+<div class="info" id="temp">Temperatura estimada: -- °C</div>
+<div class="info" id="ubicacion">Ubicación: --</div>
+
+<!-- MEDIDOR SOLAR -->
+<canvas id="gauge" width="320" height="200"></canvas>
+
+<!-- POSICIÓN DEL SOL -->
+<canvas id="solCanvas" width="320" height="160"></canvas>
 
 <div class="table-container">
 <table id="tabla">
@@ -142,42 +152,30 @@ background:#1b8a3c;
 
 <script>
 
-/* ===== REGISTRO SERVICE WORKER PARA APP INSTALABLE ===== */
-if('serviceWorker' in navigator){
-
-const swCode=`
-self.addEventListener('install',e=>{
-self.skipWaiting()
-})
-
-self.addEventListener('fetch',e=>{
-})
-`
-
-const blob=new Blob([swCode],{type:'text/javascript'})
-const swURL=URL.createObjectURL(blob)
-
-navigator.serviceWorker.register(swURL)
-
-}
-
-/* ===== FUNCIONES APP ===== */
-
 let datos=[]
+
+/* ========================= */
+/* CALCULO PRINCIPAL */
+/* ========================= */
 
 function calcular(){
 
 let mv=parseFloat(document.getElementById("mv").value)
-
-if(isNaN(mv))return
+if(isNaN(mv)) return
 
 let irradiancia=(mv*1000)/10.55
 
 mostrarResultado(irradiancia)
-actualizarGauge(irradiancia)
+dibujarMedidor(irradiancia)
+estimarTemperatura(irradiancia)
+dibujarSol()
 registrarDato(mv,irradiancia)
 
 }
+
+/* ========================= */
+/* RESULTADO */
+/* ========================= */
 
 function mostrarResultado(valor){
 
@@ -188,38 +186,162 @@ else if(valor<700) color="orange"
 else color="red"
 
 let div=document.getElementById("resultado")
-
 div.style.color=color
 
 div.innerHTML=valor.toFixed(2)+" W/m²"
 
 }
 
-function actualizarGauge(valor){
+/* ========================= */
+/* TEMPERATURA ESTIMADA */
+/* modelo simple educativo */
+/* ========================= */
+
+function estimarTemperatura(irr){
+
+let temp=15+(irr*0.02)
+
+document.getElementById("temp").innerHTML=
+"Temperatura estimada: "+temp.toFixed(1)+" °C"
+
+}
+
+/* ========================= */
+/* MEDIDOR ANALÓGICO */
+/* ========================= */
+
+function dibujarMedidor(valor){
 
 let canvas=document.getElementById("gauge")
 let ctx=canvas.getContext("2d")
 
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
+let cx=160
+let cy=160
+let radio=120
+
 let max=1200
-let porcentaje=Math.min(valor/max,1)
+let anguloValor=(valor/max)*Math.PI
 
-let angulo=porcentaje*Math.PI
-
+function arco(inicio,fin,color){
 ctx.beginPath()
-ctx.arc(150,150,120,Math.PI,2*Math.PI)
+ctx.arc(cx,cy,radio,inicio,fin)
 ctx.lineWidth=18
-ctx.strokeStyle="#ddd"
+ctx.strokeStyle=color
 ctx.stroke()
+}
 
-ctx.beginPath()
-ctx.arc(150,150,120,Math.PI,Math.PI+angulo)
-ctx.lineWidth=18
-ctx.strokeStyle="orange"
-ctx.stroke()
+arco(Math.PI,Math.PI+Math.PI*0.25,"blue")
+arco(Math.PI+Math.PI*0.25,Math.PI+Math.PI*0.55,"green")
+arco(Math.PI+Math.PI*0.55,Math.PI+Math.PI*0.8,"orange")
+arco(Math.PI+Math.PI*0.8,2*Math.PI,"red")
+
+ctx.fillStyle="black"
+ctx.font="12px Arial"
+
+for(let i=0;i<=1200;i+=200){
+
+let ang=Math.PI+(i/max)*Math.PI
+
+let x=cx+Math.cos(ang)*(radio-25)
+let y=cy+Math.sin(ang)*(radio-25)
+
+ctx.fillText(i,x-10,y+5)
 
 }
+
+let ang=Math.PI+anguloValor
+
+let x=cx+Math.cos(ang)*(radio-30)
+let y=cy+Math.sin(ang)*(radio-30)
+
+ctx.beginPath()
+ctx.moveTo(cx,cy)
+ctx.lineTo(x,y)
+ctx.lineWidth=4
+ctx.strokeStyle="black"
+ctx.stroke()
+
+ctx.beginPath()
+ctx.arc(cx,cy,6,0,2*Math.PI)
+ctx.fillStyle="black"
+ctx.fill()
+
+}
+
+/* ========================= */
+/* POSICION DEL SOL */
+/* modelo gráfico por hora */
+/* ========================= */
+
+function dibujarSol(){
+
+let canvas=document.getElementById("solCanvas")
+let ctx=canvas.getContext("2d")
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+let hora=new Date().getHours()+new Date().getMinutes()/60
+
+let salida=6
+let puesta=18
+
+let progreso=(hora-salida)/(puesta-salida)
+
+if(progreso<0) progreso=0
+if(progreso>1) progreso=1
+
+let x=20+progreso*280
+let y=120-Math.sin(progreso*Math.PI)*80
+
+/* horizonte */
+ctx.beginPath()
+ctx.moveTo(10,120)
+ctx.lineTo(310,120)
+ctx.stroke()
+
+/* trayectoria */
+ctx.beginPath()
+ctx.arc(160,120,140,Math.PI,2*Math.PI)
+ctx.strokeStyle="#aaa"
+ctx.stroke()
+
+/* sol */
+ctx.beginPath()
+ctx.arc(x,y,12,0,2*Math.PI)
+ctx.fillStyle="orange"
+ctx.fill()
+
+}
+
+/* ========================= */
+/* UBICACION GPS */
+/* ========================= */
+
+function obtenerUbicacion(){
+
+if(!navigator.geolocation) return
+
+navigator.geolocation.getCurrentPosition(pos=>{
+
+let lat=pos.coords.latitude.toFixed(4)
+let lon=pos.coords.longitude.toFixed(4)
+
+let texto="Ubicación: "+lat+", "+lon
+
+document.getElementById("ubicacion").innerHTML=texto
+
+})
+
+}
+
+obtenerUbicacion()
+dibujarSol()
+
+/* ========================= */
+/* REGISTRO DATOS */
+/* ========================= */
 
 function registrarDato(mv,irr){
 
@@ -230,12 +352,15 @@ datos.push({hora,mv,irr})
 let tabla=document.querySelector("#tabla tbody")
 
 let row=tabla.insertRow()
-
 row.insertCell(0).innerText=hora
 row.insertCell(1).innerText=mv
 row.insertCell(2).innerText=irr.toFixed(2)
 
 }
+
+/* ========================= */
+/* EXPORTAR CSV */
+/* ========================= */
 
 function descargarCSV(){
 
@@ -250,11 +375,8 @@ csv+=`${d.hora},${d.mv},${d.irr}\n`
 let blob=new Blob([csv],{type:"text/csv"})
 
 let a=document.createElement("a")
-
 a.href=URL.createObjectURL(blob)
-
 a.download="datos_piranometro.csv"
-
 a.click()
 
 }
