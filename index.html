@@ -118,7 +118,7 @@ background:#1b8a3c;
 <p>Piranómetro LabVolt</p>
 <p><b>Sensibilidad fija: 10.55 µV/(W/m²)</b></p>
 
-<input type="number" id="mv" placeholder="Voltaje (mV)">
+<input type="number" id="V" placeholder="Voltaje (V)">
 
 <button onclick="calcular()">Calcular</button>
 
@@ -161,9 +161,9 @@ let datos=[]
 function calcular(){
 
 let mv=parseFloat(document.getElementById("mv").value)
-if(isNaN(mv)) return
+if(isNaN(V)) return
 
-let irradiancia=(mv*1000)/10.55
+let irradiancia=((V/100)*1000)/10.55
 
 mostrarResultado(irradiancia)
 dibujarMedidor(irradiancia)
